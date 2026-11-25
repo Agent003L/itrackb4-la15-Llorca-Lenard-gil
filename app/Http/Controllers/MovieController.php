@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use App\Models\Genre;
 use App\Models\Movie;
@@ -58,11 +59,15 @@ class MovieController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Movie::class);
+
         return view('movies.create', ['genres' => Genre::all()]);
     }
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Movie::class);
+
         $validated = $request->validate([
             'title'      => 'required|string|max:255',
             'director'   => 'required|string|max:255',
@@ -84,6 +89,8 @@ class MovieController extends Controller
 
     public function edit(Movie $movie)
     {
+        Gate::authorize('update', $movie);
+
         $genres = Genre::all();
 
         return view('movies.edit', compact('movie', 'genres'));
@@ -91,6 +98,8 @@ class MovieController extends Controller
 
     public function update(Request $request, Movie $movie)
     {
+        Gate::authorize('update', $movie);
+
         $validated = $request->validate([
             'title'      => 'required|string|max:255',
             'director'   => 'required|string|max:255',
@@ -107,6 +116,8 @@ class MovieController extends Controller
 
     public function destroy(Movie $movie)
     {
+        Gate::authorize('delete', $movie);
+
         abort_if($movie->genre->movies()->count() === 1, 403);
 
         $movie->delete();

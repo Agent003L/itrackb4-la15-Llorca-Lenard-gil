@@ -4,10 +4,14 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">All movies</h2>
-    @auth
+    @can('create', App\Models\Movie::class)
         <a href="{{ route('movies.create') }}" class="btn btn-primary">+ Add Movie</a>
-    @endauth
+    @endcan
 </div>
+
+@cannot('create', App\Models\Movie::class)
+    <p class="text-muted small">You are viewing this list in read-only mode.</p>
+@endcannot
 
 <form method="GET" action="{{ route('movies.index') }}" class="card card-body shadow-sm mb-4">
     <div class="row g-2 align-items-end">
@@ -61,32 +65,40 @@
                 <th>Title</th>
                 <th>Genre</th>
                 <th>Year</th>
-                <th class="text-end">Action</th>
+                @can('create', App\Models\Movie::class)
+                    <th class="text-end">Action</th>
+                @endcan
             </tr>
         </thead>
         <tbody>
             @forelse ($movies as $movie)
                 <tr>
                     <td>{{ $movie->id }}</td>
-                    <td>{{ $movie->title }}</td>
+                    <td>
+                        <a href="{{ route('movies.show', $movie) }}"
+                           class="text-decoration-none">{{ $movie->title }}</a>
+                    </td>
                     <td><span class="badge bg-secondary">{{ $movie->genre->name }}</span></td>
                     <td>{{ $movie->year }}</td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-outline-dark"
-                           href="{{ route('movies.show', $movie) }}">View Details</a>
 
-                        @auth
-                            <a href="{{ route('movies.edit', $movie) }}"
-                               class="btn btn-outline-primary btn-sm">Edit</a>
-                            <form action="{{ route('movies.destroy', $movie) }}" method="POST"
-                                  class="d-inline"
-                                  onsubmit="return confirm('Delete this record?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                            </form>
-                        @endauth
-                    </td>
+                    @can('create', App\Models\Movie::class)
+                        <td class="text-end">
+                            @can('update', $movie)
+                                <a href="{{ route('movies.edit', $movie) }}"
+                                   class="btn btn-outline-primary btn-sm">Edit</a>
+                            @endcan
+
+                            @can('delete', $movie)
+                                <form action="{{ route('movies.destroy', $movie) }}" method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('Delete this record?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            @endcan
+                        </td>
+                    @endcan
                 </tr>
             @empty
                 <tr>

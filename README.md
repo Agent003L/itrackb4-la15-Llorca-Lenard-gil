@@ -1,25 +1,25 @@
-# LA14: Locking the Front Door
+# LA15: Deciding Who May
 
-## F1: Authentication vs authorisation
+## F1: Two questions
 
-This lesson gave my movies app authentication: visitors can register, log in and log out, so the app knows who they are. What is still missing is authorisation: right now any signed-in user can edit or delete any movie, and nothing decides what each user is allowed to do.
+LA14 answered "who are you?": `LoginController` and the `auth` middleware on my five movie routes in `routes/web.php` decide whether somebody is signed in. This week's policy, `app/Policies/MoviePolicy.php`, answers "what may you do?": only an account with the role `admin` may add, edit or delete a movie.
 
-## F2: session()->regenerate()
+## F2: role and $fillable
 
-After a successful login, `regenerate()` gives the visitor a new session id. If I skipped it, someone who planted a known session id on a visitor's browser before login would still hold the id of the now signed-in session (session fixation).
+`$fillable` only filters mass assignment, where a model is filled from an array like `User::create($validated)`, so a visitor can't slip in a field like `role`. In Tinker I set `$u->role = 'admin'` and called `save()` on one property myself, which is not mass assignment, so `$fillable` didn't apply to it.
 
-## F3: One message for both login failures
+## F3: 403 versus login page
 
-My login shows the same message for a wrong password and an unknown email. If the messages differed, a stranger could test email addresses and learn which ones are registered in my app.
+A signed-in non-admin typing `/movies/create` gets a 403 from the policy, through `Gate::authorize('create', Movie::class)` in `MovieController`. A guest gets my login page from the `auth` middleware, which runs first. They differ because the guest can fix their problem by logging in, while a non-admin can't, and sending them to login again would be misleading.
 
-## F4: Public index and show
+## F4: Public list and detail pages
 
-`index` and `show` stay public because browsing the movie catalogue is the point of the app and changes nothing. `create`, `edit`, `update` and `destroy` change data, so they use `auth` to make sure only a signed-in user can reach them.
+`index` and `show` have no `authorize` call, and `MoviePolicy` returns `true` for `viewAny` and `view`, on purpose. Browsing my movie catalogue is the point of the app, so anyone may look; only changing the data needs permission.
 
-## F5: Hiding the buttons
+## F5: One rule, two readers
 
-Hiding Add, Edit and Delete only removes the links; the addresses still exist, and a guest can type `/movies/create` directly (my screenshot 19). What actually stops a stranger is the `auth` middleware on those routes, which redirects them to login.
+The `$user->role === 'admin'` rule lives only in `MoviePolicy`, and both `MovieController` and `movies/index.blade.php` read it. If I'd written it by hand in both places, changing it (for example adding an editor role) could miss one copy, leaving a button shown that the controller then refuses, or hidden while the controller still allows it.
 
-## F6: Why the route must be named login
+## F6: SESSION_LIFETIME
 
-The `auth` middleware sends guests to the route named `login`. When I renamed my GET login route to `signin` (screenshot 20), the redirect failed with "Route [login] not defined", so the name has to match exactly.
+`SESSION_LIFETIME` counts the minutes of inactivity since the last request, not the time since I logged in and not the time the page has been open. There was no warning because the server never contacts the browser; the session simply expired, so my next click was treated as a guest request and redirected to login.
